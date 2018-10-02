@@ -11,6 +11,29 @@ RUN yum -y update; yum clean all
 RUN yum -y install sudo epel-release; yum clean all
 RUN yum -y install postgresql-server postgresql postgresql-contrib supervisor pwgen; yum clean all
 
+# Install Python and Node.js
+RUN yum install -y https://centos7.iuscommunity.org/ius-release.rpm epel-release
+RUN yum install -y wget unzip iproute python36u python36u-libs python36u-devel python36u-pip sudo
+
+RUN yum -y remove git
+#RUN yum -y install https://centos7.iuscommunity.org/ius-release.rpm
+RUN yum -y install git2u yum-utils
+
+
+# Install tools
+RUN pip3.6 install flake8 nose coverage
+RUN pip3.6 install awscli --upgrade --user
+RUN pip3.6 install -r requirements.txt
+
+RUN sed -i -e 's/^#\s%wheel\s*ALL=(ALL)\s*ALL$/%wheel\tALL=(ALL)\tALL/g' /etc/sudoers
+RUN sed -i -e 's/^#\s%wheel\s*ALL=(ALL)\s*NOPASSWD: ALL$/jenkins\tALL=(ALL)\tNOPASSWD: ALL/g' /etc/sudoers
+
+# 実行するJenkinsユーザIDおよびグループIDと一致させること
+RUN groupadd -g 991 jenkins
+RUN useradd -u 995 -g 991 jenkins
+RUN usermod -aG wheel jenkins
+
+
 ADD ./postgresql-setup /usr/bin/postgresql-setup
 ADD ./supervisord.conf /etc/supervisord.conf
 ADD ./start_postgres.sh /start_postgres.sh
@@ -26,7 +49,7 @@ ADD ./postgresql.conf /var/lib/pgsql/data/postgresql.conf
 
 RUN chown -v postgres.postgres /var/lib/pgsql/data/postgresql.conf
 
-RUN echo "host    all             all             0.0.0.0/0               md5" >> /var/lib/pgsql/data/pg_hba.conf
+RUN echo "host    all             all             0.0.0.0/0               trust" >> /var/lib/pgsql/data/pg_hba.conf
 
 VOLUME ["/var/lib/pgsql"]
 
